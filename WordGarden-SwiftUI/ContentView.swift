@@ -6,8 +6,13 @@
 //
 
 import SwiftUI
+import AVFAudio
+
 
 struct ContentView: View {
+    @State private var audioPlayer: AVAudioPlayer!
+    
+    
     @State private var wordsGuessed = 0
     @State private var wordsMissed = 0
     
@@ -120,8 +125,8 @@ struct ContentView: View {
             Image(imageName)
                 .resizable()
                 .scaledToFit()
-                .animation(.easeInOut(duration: 0.5), value: 1)
-                
+                .animation(.easeIn(duration: 0.75), value: imageName)
+            
         }
         .padding(.horizontal)
         .ignoresSafeArea(edges: .bottom)
@@ -154,17 +159,37 @@ struct ContentView: View {
     
     func updateGamePlay(){
         if !wordToGuess.contains(guessedLetter){
+            // Letter was not guessed
             guessesRemaining -= 1
-            imageName = "flower\(guessesRemaining)"
+            
+            // animate crumbling leaf and play incorrect
+            imageName = "wilt\(guessesRemaining)"
+            playSound(soundName: "incorrect")
+            
+            // Dilay animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7){
+                imageName = "flower\(guessesRemaining)"
+            }
+        } else {
+            // Letter was guessed
+            playSound(soundName: "correct")
         }
         
         if !revealedWord.contains("_"){
+            // Word was Guessed
+            playSound(soundName: "word-guessed")
+            
             gameStatusMessage = "You've Guessed It! It took You \(lettersGuessed.count) Guesses to Guess the Word!"
+            
             wordsGuessed += 1
             currentWordIndex += 1
             playAgainHidden = false
         } else if guessesRemaining == 0 {
+            // Word was not Guessed
+            playSound(soundName: "word-not-guessed")
+            
             gameStatusMessage = "So Sorry. You're All Out of Guesses."
+            
             wordsMissed += 1
             currentWordIndex += 1
             playAgainHidden = false
@@ -178,6 +203,18 @@ struct ContentView: View {
         }
         
         guessedLetter = ""
+    }
+    
+    func playSound(soundName: String){
+        guard let soundFile = NSDataAsset(name: soundName) else {
+            return
+        }
+        do {
+            audioPlayer = try AVAudioPlayer(data: soundFile.data)
+            audioPlayer.play()
+        } catch {
+            print("ERROR during plaing Audio")
+        }
     }
 }
 
